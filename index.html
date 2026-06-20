@@ -640,6 +640,17 @@
       font-size: 13px;
     }
 
+    .task-action {
+      margin-top: 10px;
+      min-height: 34px;
+      padding: 0 13px;
+      color: #fff;
+      background: linear-gradient(135deg, #1497a8, #35a96f);
+      border-color: rgba(36, 48, 68, 0.68);
+      box-shadow: 0 4px 0 rgba(20, 102, 88, 0.34), 0 8px 16px rgba(20, 151, 168, 0.16);
+      font-size: 13px;
+    }
+
     .stage.is-explore-mode .sprite.is-current {
       filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.98)) drop-shadow(0 0 18px rgba(231, 95, 128, 0.4));
     }
@@ -1153,6 +1164,13 @@
       if (step.target) {
         taskCard.innerHTML = `<strong>当前任务</strong>${step.target.text}`;
         setTargetRing(step.target);
+      } else if ((currentStep === 1 || currentStep === 3) && !completedSteps.has(currentStep)) {
+        const label = currentStep === 1 ? "完成内质网加工" : "完成高尔基体加工";
+        taskCard.innerHTML = `
+          <strong>加工任务</strong>${step.desc}
+          <button class="task-action" type="button">${label}</button>
+        `;
+        setTargetRing(null);
       } else {
         taskCard.innerHTML = `<strong>观察任务</strong>${step.desc}`;
         setTargetRing(null);
@@ -1426,14 +1444,8 @@
 
       if (currentStep === 0) {
         updateStep(1, false);
-        markStepDone(1);
-        await wait(900);
-        updateStep(2, false);
       } else if (currentStep === 2) {
         updateStep(3, false);
-        markStepDone(3);
-        await wait(900);
-        updateStep(4, false);
       } else if (currentStep === 4) {
         updateStep(5, false);
         completedSteps = new Set(steps.map((_, index) => index));
@@ -1441,6 +1453,17 @@
         taskCard.innerHTML = `<strong>探索完成</strong>囊泡与细胞膜融合，蛋白质被释放到细胞外。`;
       } else {
         updateStep(findNextUnfinishedStep(currentStep + 1), false);
+      }
+    }
+
+    function completeProcessingStep() {
+      if (!isExploreMode || isPlaying) return;
+      if (currentStep === 1) {
+        markStepDone(1);
+        updateStep(2, false);
+      } else if (currentStep === 3) {
+        markStepDone(3);
+        updateStep(4, false);
       }
     }
 
@@ -1531,6 +1554,11 @@
         }
         showOrganelleInfo(node.dataset.info);
       });
+    });
+    taskCard.addEventListener("click", (event) => {
+      if (event.target.closest(".task-action")) {
+        completeProcessingStep();
+      }
     });
     Object.values(sprites).forEach(makeDraggable);
     updateStep(0, false);
