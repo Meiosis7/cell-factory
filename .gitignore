@@ -1,0 +1,6 @@
+.DS_Store
+Thumbs.db
+
+# Generated experiment assets that are not used by the current page
+ai-assets/animated/
+

@@ -1,0 +1,1549 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分泌蛋白动态运输地图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #253044;
+      --muted: #63707f;
+      --teal: #1497a8;
+      --green: #4fa85f;
+      --orange: #f09a2f;
+      --paper: rgba(255, 252, 241, 0.93);
+      --glass: rgba(255, 255, 255, 0.72);
+      --shadow: 0 12px 0 rgba(33, 45, 62, 0.16), 0 18px 50px rgba(23, 41, 58, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 9% 22%, rgba(255, 255, 255, 0.78) 0 2px, transparent 3px),
+        radial-gradient(circle at 88% 36%, rgba(255, 255, 255, 0.72) 0 2px, transparent 3px),
+        radial-gradient(circle at 18% 14%, rgba(242, 195, 84, 0.26), transparent 30%),
+        radial-gradient(circle at 84% 16%, rgba(72, 174, 192, 0.25), transparent 34%),
+        linear-gradient(135deg, #f6fbf4 0%, #e7f5f6 52%, #fff2dc 100%);
+      background-size: auto, auto, auto, auto, 100% 100%;
+    }
+
+    .page {
+      min-height: 100vh;
+      width: min(1580px, 100%);
+      margin: 0 auto;
+      padding: clamp(8px, 1.5vw, 18px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(260px, 328px);
+      gap: clamp(10px, 1.4vw, 18px);
+      align-items: start;
+    }
+
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.15;
+      letter-spacing: 0;
+      text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.86);
+    }
+
+    .controls {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      min-height: 40px;
+      padding: 0 15px;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      border: 2px solid rgba(36, 48, 68, 0.72);
+      transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+    }
+
+    button:hover,
+    button:focus-visible {
+      transform: translateY(-1px);
+      outline: none;
+      filter: saturate(1.05);
+    }
+
+    .primary {
+      color: #fff;
+      background: linear-gradient(135deg, #138da0, #17b29d);
+      box-shadow: 0 5px 0 #0f6170, 0 10px 22px rgba(19, 141, 160, 0.23);
+    }
+
+    .secondary {
+      color: #24515b;
+      background: #fff7d9;
+      box-shadow: 0 4px 0 rgba(36, 48, 68, 0.24), 0 8px 18px rgba(34, 72, 88, 0.1);
+    }
+
+    .explore {
+      color: #fff;
+      background: linear-gradient(135deg, #e75f80, #f0a934);
+      box-shadow: 0 5px 0 #a64f27, 0 10px 22px rgba(231, 95, 128, 0.22);
+    }
+
+    .stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1024 / 559;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #d8f0cf;
+      border: 0;
+      box-shadow: 0 14px 34px rgba(23, 41, 58, 0.16);
+      isolation: isolate;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .map {
+      position: absolute;
+      inset: 0;
+      background: url("ai-assets/clean-background.png") center / cover no-repeat;
+      filter: saturate(1.02) contrast(1.01);
+      transition: opacity 220ms ease, filter 220ms ease;
+      z-index: 0;
+    }
+
+    .stage.is-focus-mode .map {
+      opacity: 1;
+      filter: saturate(1.03) contrast(1.01);
+    }
+
+    .route {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+
+    .stage.is-route-hidden .route {
+      opacity: 0;
+    }
+
+    .route path {
+      fill: none;
+      stroke: rgba(24, 151, 168, 0.82);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-dasharray: 8 12;
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.85));
+      opacity: 0.85;
+    }
+
+    .route circle {
+      fill: #fff;
+      stroke: #168fa3;
+      stroke-width: 4;
+      filter: drop-shadow(0 2px 6px rgba(20, 81, 95, 0.25));
+      animation: routeBlink 1.9s steps(2, end) infinite;
+    }
+
+    .route circle:nth-of-type(2) { animation-delay: 0.2s; }
+    .route circle:nth-of-type(3) { animation-delay: 0.4s; }
+    .route circle:nth-of-type(4) { animation-delay: 0.6s; }
+    .route circle:nth-of-type(5) { animation-delay: 0.8s; }
+
+    .organ {
+      position: absolute;
+      z-index: 2;
+      left: var(--x);
+      top: var(--y);
+      width: var(--w);
+      transform: translate(-50%, -50%) rotate(var(--rotate, 0deg));
+      opacity: 0.92;
+      pointer-events: auto;
+      cursor: pointer;
+      transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
+      animation: organIdle 4.8s steps(4, end) infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .organ.is-active {
+      transform: translate(-50%, -50%) rotate(var(--rotate, 0deg)) scale(1.035);
+      filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 14px rgba(240, 154, 47, 0.45));
+      animation: organFocus 1.2s ease-in-out infinite alternate;
+    }
+
+    .organ[data-organ="nucleus"].is-active {
+      transform: translate(-50%, -50%) rotate(var(--rotate, 0deg));
+      animation: organIdle 4.8s steps(4, end) infinite;
+    }
+
+    .sprite {
+      position: absolute;
+      z-index: 4;
+      left: var(--x);
+      top: var(--y);
+      width: var(--size);
+      opacity: var(--alpha, 1);
+      transform: translate(-50%, -50%) scale(var(--scale, 1));
+      cursor: grab;
+      touch-action: none;
+      filter: drop-shadow(0 12px 18px rgba(24, 44, 60, 0.28));
+      transition: filter 180ms ease, opacity 180ms ease, transform 180ms ease;
+      animation: spriteIdle 3.6s steps(4, end) infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .sprite:active,
+    .sprite.is-dragging {
+      cursor: grabbing;
+      filter: drop-shadow(0 16px 22px rgba(24, 44, 60, 0.34)) drop-shadow(0 0 14px rgba(255, 255, 255, 0.95));
+    }
+
+    .sprite.is-muted {
+      opacity: 0.34;
+    }
+
+    .sprite.is-current {
+      animation: pulse 900ms ease-in-out infinite alternate;
+    }
+
+    .vesicle {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 36% 30%, rgba(255, 255, 255, 0.95) 0 8%, transparent 9%),
+        radial-gradient(circle at 50% 52%, rgba(149, 211, 226, 0.34) 0 43%, transparent 44%),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.32) 0 48%, transparent 49%),
+        conic-gradient(from 15deg, #f3a7ce, #ffe06e, #79cfe1, #b795df, #f3a7ce);
+      box-shadow:
+        inset 0 0 0 7px rgba(255, 255, 255, 0.92),
+        inset 0 0 0 14px rgba(75, 152, 178, 0.2),
+        0 12px 18px rgba(24, 44, 60, 0.22);
+      animation: vesicleFloat 2.2s steps(4, end) infinite;
+    }
+
+    .vesicle::before {
+      content: "";
+      position: absolute;
+      inset: 17%;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.36);
+      box-shadow: inset 0 0 16px rgba(47, 122, 146, 0.18);
+    }
+
+    .vesicle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      width: 42%;
+      aspect-ratio: 1;
+      border-radius: 42% 58% 52% 48%;
+      transform: translate(-50%, -50%) scale(var(--cargo-scale, 1));
+      background:
+        radial-gradient(circle at 33% 32%, #ffe272 0 15%, transparent 16%),
+        radial-gradient(circle at 63% 36%, #f58a8d 0 16%, transparent 17%),
+        radial-gradient(circle at 48% 67%, #7bc7e1 0 17%, transparent 18%),
+        conic-gradient(from 20deg, #f5a6b6, #ffe272, #7bc7e1, #b795df, #f5a6b6);
+      box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7);
+    }
+
+    .sprite.is-hidden,
+    .process-asset.is-hidden {
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+
+    .decor {
+      position: absolute;
+      z-index: 2;
+      left: var(--x);
+      top: var(--y);
+      width: var(--w);
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      cursor: pointer;
+      filter: drop-shadow(0 10px 16px rgba(28, 45, 62, 0.16));
+      opacity: 0.92;
+      animation: decorIdle 4.2s steps(4, end) infinite;
+    }
+
+    .organ-label {
+      position: absolute;
+      z-index: 8;
+      left: var(--x);
+      top: var(--y);
+      transform: translate(-50%, -50%);
+      min-height: 26px;
+      padding: 5px 17px 7px;
+      border: 0;
+      border-radius: 0;
+      color: #244350;
+      background: url("ai-assets/comic-label-frame.png") center / 100% 100% no-repeat;
+      box-shadow: none;
+      font-size: clamp(10px, 1.02vw, 12px);
+      font-weight: 900;
+      white-space: nowrap;
+      cursor: pointer;
+      animation: labelWiggle 5.2s steps(5, end) infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .organ-label:hover,
+    .organ-label:focus-visible {
+      color: #0f7888;
+      outline: none;
+      transform: translate(-50%, -50%) rotate(-2deg) scale(1.05);
+    }
+
+    .organelle-card {
+      position: absolute;
+      z-index: 9;
+      left: 16px;
+      top: 16px;
+      width: min(310px, calc(100% - 32px));
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 3px solid rgba(36, 48, 68, 0.82);
+      background: #fff9e8;
+      box-shadow: 6px 6px 0 rgba(36, 48, 68, 0.14), 0 14px 32px rgba(24, 44, 60, 0.14);
+      opacity: 0;
+      transform: translateY(-8px) rotate(-1deg) scale(0.92);
+      pointer-events: none;
+      transform-origin: 18px 18px;
+    }
+
+    .organelle-card.is-visible {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg) scale(1);
+      pointer-events: auto;
+      animation: cardPop 320ms steps(4, end) both;
+    }
+
+    .organelle-card.is-closing {
+      opacity: 0;
+      transform: translateY(-10px) rotate(2deg) scale(0.86);
+      animation: cardClose 220ms steps(3, end) both;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 6px;
+    }
+
+    .organelle-card h3 {
+      margin: 0;
+      font-size: clamp(14px, 1.5vw, 17px);
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .card-close {
+      flex: 0 0 auto;
+      width: 27px;
+      height: 27px;
+      min-height: 0;
+      padding: 0;
+      border-radius: 50%;
+      border: 2px solid rgba(36, 48, 68, 0.78);
+      color: #253044;
+      background: #fff;
+      box-shadow: 0 3px 0 rgba(36, 48, 68, 0.18);
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .card-close:hover,
+    .card-close:focus-visible {
+      transform: translateY(-1px) rotate(5deg);
+      outline: none;
+      background: #ffe3ec;
+    }
+
+    .organelle-card p {
+      margin: 0;
+      color: #3e4b5d;
+      font-size: clamp(11px, 1.18vw, 13px);
+      line-height: 1.55;
+    }
+
+    .protein {
+      position: absolute;
+      z-index: 5;
+      left: 30%;
+      top: 27%;
+      width: clamp(17px, 2.7vw, 30px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.7);
+      background:
+        radial-gradient(circle at 34% 26%, #fff 0 12%, transparent 13%),
+        radial-gradient(circle at center, #ffe486 0 28%, #ffa23d 55%, #df5745 85%);
+      box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.72), 0 0 24px rgba(255, 157, 54, 0.85);
+      pointer-events: none;
+    }
+
+    .protein.is-visible {
+      opacity: 1;
+    }
+
+    .protein.is-exocytosis {
+      animation: exocytosis 900ms ease-out forwards;
+    }
+
+    .process-asset {
+      position: absolute;
+      z-index: 5;
+      left: var(--x);
+      top: var(--y);
+      width: var(--size);
+      transform: translate(-50%, -50%) scale(var(--scale, 1));
+      opacity: var(--alpha, 1);
+      pointer-events: none;
+      filter: drop-shadow(0 10px 16px rgba(24, 44, 60, 0.22));
+      transition: opacity 220ms ease, transform 260ms ease, filter 220ms ease;
+      animation: processIdle 3.4s steps(4, end) infinite;
+    }
+
+    .peptide-chain {
+      transform-origin: 10% 50%;
+      animation: peptideIdle 2.8s steps(4, end) infinite;
+    }
+
+    .folded-protein {
+      width: var(--size);
+      aspect-ratio: 1;
+      border-radius: 42% 58% 52% 48%;
+      background:
+        radial-gradient(circle at 34% 30%, #ffffff 0 8%, transparent 9%),
+        radial-gradient(circle at 35% 37%, #ffe27d 0 9%, transparent 10%),
+        radial-gradient(circle at 60% 33%, #f58a8d 0 10%, transparent 11%),
+        radial-gradient(circle at 48% 62%, #7bc7e1 0 11%, transparent 12%),
+        radial-gradient(circle at 70% 68%, #b795df 0 9%, transparent 10%),
+        conic-gradient(from 20deg, #f7b0b8, #ffe27d, #7bc7e1, #b795df, #f7b0b8);
+      box-shadow: 0 0 16px rgba(255, 255, 255, 0.62), 0 8px 12px rgba(24, 44, 60, 0.14);
+      animation: foldedIdle 3s steps(4, end) infinite;
+    }
+
+    .folded-protein::before,
+    .folded-protein::after {
+      content: "";
+      position: absolute;
+      inset: 18%;
+      border: 4px solid rgba(86, 78, 139, 0.55);
+      border-left-color: transparent;
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      transform: rotate(25deg);
+    }
+
+    .folded-protein::after {
+      inset: 30%;
+      border-color: rgba(43, 137, 154, 0.55);
+      border-right-color: transparent;
+      transform: rotate(-35deg);
+    }
+
+    .exocytosis-burst {
+      position: absolute;
+      z-index: 6;
+      left: var(--x);
+      top: var(--y);
+      width: var(--size);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0.2);
+      opacity: 0;
+      pointer-events: none;
+      border: 5px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 0 0 0 rgba(255, 166, 54, 0.5), 0 0 22px rgba(255, 166, 54, 0.7);
+    }
+
+    .exocytosis-burst.is-playing {
+      animation: burst 980ms ease-out forwards;
+    }
+
+    .hud {
+      border-radius: 14px;
+      border: 4px solid rgba(36, 48, 68, 0.84);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hud-main {
+      padding: 16px 16px 10px;
+    }
+
+    .step-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(135deg, #e75f80, #f0a934);
+      border: 2px solid rgba(36, 48, 68, 0.75);
+      box-shadow: 0 4px 0 rgba(36, 48, 68, 0.18);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .hud h2 {
+      margin: 13px 0 8px;
+      font-size: clamp(20px, 2.2vw, 26px);
+      line-height: 1.22;
+      letter-spacing: 0;
+      text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.92);
+    }
+
+    .hud p {
+      margin: 0;
+      color: #3e4b5d;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .progress {
+      height: 9px;
+      background: rgba(37, 48, 68, 0.1);
+      overflow: hidden;
+    }
+
+    .progress span {
+      display: block;
+      width: var(--progress);
+      height: 100%;
+      background: linear-gradient(90deg, #e75f80, #f0a934, #17b29d);
+      transition: width 260ms ease;
+    }
+
+    .steps {
+      display: grid;
+      gap: 8px;
+      padding: 0 16px 16px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 9px;
+      align-items: center;
+      min-height: 44px;
+      padding: 7px 9px 7px 7px;
+      border-radius: 12px;
+      color: var(--muted);
+      background: #fff;
+      cursor: pointer;
+      border: 2px solid rgba(36, 48, 68, 0.18);
+      box-shadow: 0 3px 0 rgba(36, 48, 68, 0.1);
+    }
+
+    .step b {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      color: #fff;
+      background: #91a3ad;
+      font-size: 14px;
+    }
+
+    .step.is-active {
+      color: var(--ink);
+      background: #fff;
+      border-color: rgba(231, 95, 128, 0.55);
+      box-shadow: 4px 4px 0 rgba(231, 95, 128, 0.14), 0 8px 18px rgba(25, 64, 77, 0.1);
+    }
+
+    .step.is-active b {
+      background: var(--orange);
+    }
+
+    .step.is-done {
+      color: #2d6b57;
+      border-color: rgba(35, 158, 108, 0.45);
+      background: #f3fff8;
+    }
+
+    .step.is-done b {
+      font-size: 0;
+      background: #35a96f;
+    }
+
+    .step.is-done b::before {
+      content: "✓";
+      font-size: 16px;
+    }
+
+    .tip {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: var(--glass);
+      backdrop-filter: blur(14px) saturate(1.25);
+      -webkit-backdrop-filter: blur(14px) saturate(1.25);
+      color: #496070;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .task-card {
+      display: none;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 2px solid rgba(231, 95, 128, 0.45);
+      background: #fff7e7;
+      box-shadow: 4px 4px 0 rgba(231, 95, 128, 0.11);
+      color: #334254;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .task-card.is-visible {
+      display: block;
+      animation: cardPop 260ms steps(4, end) both;
+    }
+
+    .task-card strong {
+      display: block;
+      margin-bottom: 3px;
+      color: #d85d73;
+      font-size: 13px;
+    }
+
+    .stage.is-explore-mode .sprite.is-current {
+      filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.98)) drop-shadow(0 0 18px rgba(231, 95, 128, 0.4));
+    }
+
+    .target-ring {
+      position: absolute;
+      z-index: 3;
+      left: var(--x);
+      top: var(--y);
+      width: var(--size, 7%);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 4px dashed rgba(231, 95, 128, 0.82);
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.45), 0 0 22px rgba(231, 95, 128, 0.24);
+    }
+
+    .target-ring.is-visible {
+      opacity: 1;
+      animation: targetPulse 1s steps(4, end) infinite;
+    }
+
+    .target-ring.is-success {
+      border-color: rgba(53, 169, 111, 0.88);
+      animation: targetSuccess 420ms steps(4, end) both;
+    }
+
+    @keyframes pulse {
+      from {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      to {
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+    }
+
+    @keyframes cardPop {
+      0% {
+        opacity: 0;
+        transform: translateY(-12px) rotate(-3deg) scale(0.82);
+        filter: saturate(0.9);
+      }
+      65% {
+        opacity: 1;
+        transform: translateY(2px) rotate(1deg) scale(1.04);
+        filter: saturate(1.08);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) rotate(0deg) scale(1);
+        filter: saturate(1);
+      }
+    }
+
+    @keyframes cardClose {
+      0% {
+        opacity: 1;
+        transform: translateY(0) rotate(0deg) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-10px) rotate(2deg) scale(0.86);
+      }
+    }
+
+    @keyframes organFocus {
+      from {
+        filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.82)) drop-shadow(0 0 8px rgba(240, 154, 47, 0.28));
+      }
+      to {
+        filter: drop-shadow(0 0 24px rgba(255, 255, 255, 1)) drop-shadow(0 0 18px rgba(240, 154, 47, 0.48));
+      }
+    }
+
+    @keyframes organIdle {
+      0%, 100% {
+        opacity: 0.9;
+        filter: drop-shadow(0 8px 12px rgba(28, 45, 62, 0.12));
+      }
+      50% {
+        opacity: 0.98;
+        filter: drop-shadow(0 10px 15px rgba(28, 45, 62, 0.18));
+      }
+    }
+
+    @keyframes spriteIdle {
+      0%, 100% {
+        filter: drop-shadow(0 10px 15px rgba(24, 44, 60, 0.23));
+      }
+      50% {
+        filter: drop-shadow(0 13px 18px rgba(24, 44, 60, 0.3)) drop-shadow(0 0 7px rgba(255, 255, 255, 0.58));
+      }
+    }
+
+    @keyframes vesicleFloat {
+      0%, 100% {
+        box-shadow:
+          inset 0 0 0 7px rgba(255, 255, 255, 0.92),
+          inset 0 0 0 14px rgba(75, 152, 178, 0.18),
+          0 10px 16px rgba(24, 44, 60, 0.2);
+      }
+      50% {
+        box-shadow:
+          inset 0 0 0 8px rgba(255, 255, 255, 0.96),
+          inset 0 0 0 15px rgba(75, 152, 178, 0.25),
+          0 14px 20px rgba(24, 44, 60, 0.25);
+      }
+    }
+
+    @keyframes decorIdle {
+      0%, 100% {
+        filter: drop-shadow(0 9px 14px rgba(28, 45, 62, 0.14));
+      }
+      50% {
+        filter: drop-shadow(0 12px 17px rgba(28, 45, 62, 0.2));
+      }
+    }
+
+    @keyframes labelWiggle {
+      0%, 100% {
+        filter: drop-shadow(0 2px 0 rgba(36, 48, 68, 0.06));
+      }
+      40% {
+        filter: drop-shadow(1px 3px 0 rgba(36, 48, 68, 0.1));
+      }
+      70% {
+        filter: drop-shadow(-1px 2px 0 rgba(36, 48, 68, 0.08));
+      }
+    }
+
+    @keyframes processIdle {
+      0%, 100% {
+        filter: drop-shadow(0 9px 14px rgba(24, 44, 60, 0.2));
+      }
+      50% {
+        filter: drop-shadow(0 12px 18px rgba(24, 44, 60, 0.28)) drop-shadow(0 0 8px rgba(255, 255, 255, 0.55));
+      }
+    }
+
+    @keyframes peptideIdle {
+      0%, 100% {
+        filter: drop-shadow(0 8px 12px rgba(24, 44, 60, 0.18));
+      }
+      50% {
+        filter: drop-shadow(0 11px 15px rgba(24, 44, 60, 0.25)) saturate(1.08);
+      }
+    }
+
+    @keyframes foldedIdle {
+      0%, 100% {
+        box-shadow: 0 0 14px rgba(255, 255, 255, 0.58), 0 8px 12px rgba(24, 44, 60, 0.13);
+      }
+      50% {
+        box-shadow: 0 0 22px rgba(255, 255, 255, 0.85), 0 10px 14px rgba(24, 44, 60, 0.18);
+      }
+    }
+
+    @keyframes targetPulse {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(0.92);
+        opacity: 0.72;
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.08);
+        opacity: 1;
+      }
+    }
+
+    @keyframes targetSuccess {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1.35);
+        opacity: 0;
+      }
+    }
+
+    @keyframes routeBlink {
+      0%, 100% {
+        opacity: 0.72;
+      }
+      50% {
+        opacity: 1;
+      }
+    }
+
+    @keyframes exocytosis {
+      from {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2.35);
+      }
+    }
+
+    @keyframes burst {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.2);
+        box-shadow: 0 0 0 0 rgba(255, 166, 54, 0.5), 0 0 22px rgba(255, 166, 54, 0.7);
+      }
+      22% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(2.25);
+        box-shadow: 0 0 0 28px rgba(255, 166, 54, 0), 0 0 42px rgba(255, 166, 54, 0);
+      }
+    }
+
+    @media (max-width: 1180px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+
+      .header {
+        align-items: flex-start;
+      }
+
+      .hud {
+        order: 3;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .header {
+        display: grid;
+      }
+
+      .controls {
+        justify-content: flex-start;
+      }
+
+      button {
+        min-height: 38px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+
+      .hud-main {
+        padding: 14px;
+      }
+
+      .steps {
+        padding: 0 14px 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <h1>分泌蛋白动态运输地图</h1>
+      <div class="controls">
+        <button id="exploreBtn" class="explore" type="button" aria-pressed="false">探索模式</button>
+        <button id="playBtn" class="primary" type="button">播放全过程</button>
+        <button id="nextBtn" class="secondary" type="button">下一步</button>
+        <button id="routeBtn" class="secondary" type="button" aria-pressed="true">隐藏路线</button>
+        <button id="resetBtn" class="secondary" type="button">复位素材</button>
+      </div>
+    </header>
+
+    <section id="stage" class="stage is-focus-mode" aria-label="动态分泌蛋白运输地图">
+      <div class="map"></div>
+      <svg class="route" viewBox="0 0 1024 559" aria-hidden="true">
+        <path d="M318 170 C356 222 284 350 360 366 C470 368 486 280 590 286 C690 292 704 384 790 354 C852 332 858 245 914 226"/>
+        <circle cx="318" cy="170" r="12"/>
+        <circle cx="360" cy="366" r="12"/>
+        <circle cx="590" cy="286" r="12"/>
+        <circle cx="790" cy="354" r="12"/>
+        <circle cx="914" cy="226" r="12"/>
+      </svg>
+
+      <img class="organ" data-organ="nucleus" data-info="nucleus" src="ai-assets/nucleus-castle.png" alt="细胞核城堡素材" style="--x: 12%; --y: 42%; --w: 18%; --delay: .1s;">
+      <img class="organ" data-organ="rough-er" data-info="rough-er" src="ai-assets/rough-er.png" alt="粗面内质网素材" style="--x: 34%; --y: 57%; --w: 28%; --delay: .45s;">
+      <img class="organ" data-organ="golgi" data-info="golgi" src="ai-assets/golgi.png" alt="高尔基体素材" style="--x: 61%; --y: 49%; --w: 22%; --delay: .8s;">
+      <img class="organ" data-organ="cell-membrane" data-info="cell-membrane" src="ai-assets/cell-membrane.png" alt="细胞膜素材" style="--x: 91%; --y: 43%; --w: 17%; --rotate: 78deg; --delay: 1.05s;">
+      <img class="decor" data-info="mitochondrion" src="ai-assets/mitochondrion.png" alt="线粒体素材" style="--x: 58%; --y: 82%; --w: 12%;">
+
+      <img id="ribosome" class="sprite" data-info="ribosome" src="ai-assets/ribosome.png" alt="可移动核糖体" draggable="false" style="--x: 29%; --y: 30%; --size: 5.6%; --delay: .25s;">
+      <div id="transportVesicle" class="sprite vesicle" role="img" aria-label="中空运输小泡" style="--x: 36%; --y: 66%; --size: 7.2%; --cargo-scale: .86; --delay: .2s;"></div>
+      <div id="golgiVesicle" class="sprite vesicle" role="img" aria-label="中空高尔基体运输小泡" style="--x: 62%; --y: 52%; --size: 7.2%; --cargo-scale: .9; --delay: .45s;"></div>
+      <div id="secretoryVesicle" class="sprite vesicle" role="img" aria-label="中空分泌小泡" style="--x: 77%; --y: 64%; --size: 7.8%; --cargo-scale: 1; --delay: .7s;"></div>
+      <img id="peptideChain" class="process-asset peptide-chain" src="ai-assets/peptide-chain.png" alt="正在合成的肽链" style="--x: 35%; --y: 32%; --size: 6.5%; --scale: .18; --alpha: 0;">
+      <div id="foldedProtein" class="process-asset folded-protein" aria-label="盘曲折叠的蛋白结构" style="--x: 36%; --y: 61%; --size: 5.2%; --scale: .2; --alpha: 0;"></div>
+      <div id="exocytosisBurst" class="exocytosis-burst" aria-hidden="true" style="--x: 89%; --y: 40%; --size: 7%;"></div>
+      <div id="protein" class="protein" aria-hidden="true"></div>
+      <div id="targetRing" class="target-ring" aria-hidden="true"></div>
+      <button class="organ-label" data-info="nucleus" type="button" style="--x: 12%; --y: 60%; --delay: .1s;">细胞核</button>
+      <button class="organ-label" data-info="ribosome" type="button" style="--x: 31%; --y: 20%; --delay: .4s;">核糖体</button>
+      <button class="organ-label" data-info="rough-er" type="button" style="--x: 35%; --y: 82%; --delay: .7s;">粗面内质网</button>
+      <button class="organ-label" data-info="golgi" type="button" style="--x: 65%; --y: 72%; --delay: 1s;">高尔基体</button>
+      <button class="organ-label" data-info="cell-membrane" type="button" style="--x: 91%; --y: 66%; --delay: 1.3s;">细胞膜</button>
+      <button class="organ-label" data-info="mitochondrion" type="button" style="--x: 55%; --y: 93%; --delay: 1.6s;">线粒体</button>
+      <div id="organelleCard" class="organelle-card" role="status" aria-live="polite"></div>
+    </section>
+
+    <aside class="hud" aria-live="polite">
+      <div class="progress"><span id="progressBar" style="--progress: 16%;"></span></div>
+      <div class="hud-main">
+        <span id="stepLabel" class="step-label">第 1 步 / 6</span>
+        <h2 id="stepTitle">游离核糖体</h2>
+        <p id="stepDesc">核糖体读取 mRNA 信息，合成分泌蛋白的多肽链。你可以拖动核糖体，观察它作为“合成起点”的位置。</p>
+        <div id="taskCard" class="task-card" role="status" aria-live="polite"></div>
+      </div>
+      <div id="stepList" class="steps"></div>
+    </aside>
+  </main>
+
+  <script>
+    const stage = document.querySelector("#stage");
+    const protein = document.querySelector("#protein");
+    const progressBar = document.querySelector("#progressBar");
+    const stepLabel = document.querySelector("#stepLabel");
+    const stepTitle = document.querySelector("#stepTitle");
+    const stepDesc = document.querySelector("#stepDesc");
+    const stepList = document.querySelector("#stepList");
+    const exploreBtn = document.querySelector("#exploreBtn");
+    const playBtn = document.querySelector("#playBtn");
+    const nextBtn = document.querySelector("#nextBtn");
+    const routeBtn = document.querySelector("#routeBtn");
+    const resetBtn = document.querySelector("#resetBtn");
+    const peptideChain = document.querySelector("#peptideChain");
+    const foldedProtein = document.querySelector("#foldedProtein");
+    const exocytosisBurst = document.querySelector("#exocytosisBurst");
+    const organelleCard = document.querySelector("#organelleCard");
+    const taskCard = document.querySelector("#taskCard");
+    const targetRing = document.querySelector("#targetRing");
+
+    const organelleInfo = {
+      nucleus: {
+        title: "细胞核",
+        desc: "控制着细胞的代谢和遗传，是细胞的控制中心。"
+      },
+      ribosome: {
+        title: "核糖体",
+        desc: "有的附着在粗面内质网上，有的游离在细胞质基质中，是生产蛋白质的机器。"
+      },
+      "rough-er": {
+        title: "粗面内质网",
+        desc: "是蛋白质等大分子物质的合成、加工场所和运输通道；有核糖体附着的是粗面内质网。"
+      },
+      golgi: {
+        title: "高尔基体",
+        desc: "主要对来自内质网的蛋白质进行加工、分类和包装，是车间及发送站。"
+      },
+      "cell-membrane": {
+        title: "细胞膜",
+        desc: "参与物质运输、能量转化和信息传递。分泌小泡与细胞膜融合后，将蛋白质分泌到细胞外。"
+      },
+      mitochondrion: {
+        title: "线粒体",
+        desc: "是细胞进行有氧呼吸的主要场所，是细胞的动力车间，为分泌蛋白的合成、加工和运输供能。"
+      }
+    };
+
+    /*
+      坐标说明：
+      x/y 是舞台百分比坐标，和原图比例绑定。
+      如果你想让素材移动到别的位置，直接改这里即可。
+    */
+    const steps = [
+      {
+        title: "合成起始",
+        desc: "先在游离核糖体中，以氨基酸为原料开始多肽链的合成。",
+        actor: "ribosome",
+        organ: "",
+        x: 29,
+        y: 30,
+        target: { actor: "ribosome", x: 35, y: 58, size: 7, text: "拖动核糖体到粗面内质网上，开始进入内质网继续合成。" },
+        peptide: { x: 33, y: 32, scale: 0.42, alpha: 1 },
+        folded: { alpha: 0 },
+        vesicles: { transport: 0, golgi: 0, secretory: 0 }
+      },
+      {
+        title: "内质网加工",
+        desc: "肽链与核糖体一起转移到粗面内质网上继续合成，边合成边进入内质网腔，并加工、折叠成蛋白质。",
+        actor: "ribosome",
+        organ: "rough-er",
+        x: 35,
+        y: 58,
+        target: null,
+        peptide: { x: 39, y: 61, scale: 0.45, alpha: 0.25 },
+        folded: { x: 39, y: 62, scale: 1, alpha: 1 },
+        vesicles: { transport: 0, golgi: 0, secretory: 0 }
+      },
+      {
+        title: "囊泡运输",
+        desc: "内质网膜鼓出形成囊泡，包裹着蛋白质离开内质网，运输到高尔基体。",
+        actor: "transportVesicle",
+        organ: "rough-er",
+        x: 42,
+        y: 64,
+        target: { actor: "transportVesicle", x: 60, y: 51, size: 8, text: "把运输小泡送到高尔基体，让蛋白质进入下一站加工。" },
+        peptide: { alpha: 0 },
+        folded: { x: 42, y: 64, scale: 0.55, alpha: 0 },
+        vesicles: { transport: 1, golgi: 0, secretory: 0 }
+      },
+      {
+        title: "高尔基体加工",
+        desc: "囊泡与高尔基体膜融合，蛋白质进入高尔基体后继续修饰、分类和包装。",
+        actor: "golgiVesicle",
+        organ: "golgi",
+        x: 60,
+        y: 51,
+        target: null,
+        peptide: { alpha: 0 },
+        folded: { x: 64, y: 50, scale: 1.05, alpha: 1 },
+        vesicles: { transport: 0, golgi: 0, secretory: 0 }
+      },
+      {
+        title: "分泌小泡运输",
+        desc: "高尔基体膜再次形成包裹蛋白质的囊泡，将蛋白质运往细胞膜。",
+        actor: "secretoryVesicle",
+        organ: "golgi",
+        x: 77,
+        y: 64,
+        target: { actor: "secretoryVesicle", x: 89, y: 40, size: 8, text: "把分泌小泡拖到细胞膜，准备膜融合并释放蛋白质。" },
+        peptide: { alpha: 0 },
+        folded: { x: 77, y: 64, scale: 0.55, alpha: 0 },
+        vesicles: { transport: 0, golgi: 0, secretory: 1 }
+      },
+      {
+        title: "胞吐释放",
+        desc: "囊泡与细胞膜融合，将蛋白质分泌到细胞外。释放后再次显示无囊泡版蛋白质。",
+        actor: "secretoryVesicle",
+        organ: "cell-membrane",
+        x: 89,
+        y: 40,
+        target: null,
+        peptide: { alpha: 0 },
+        folded: { x: 94, y: 34, scale: 1, alpha: 1 },
+        vesicles: { transport: 0, golgi: 0, secretory: 0 }
+      }
+    ];
+
+    const sprites = {
+      ribosome: document.querySelector("#ribosome"),
+      transportVesicle: document.querySelector("#transportVesicle"),
+      golgiVesicle: document.querySelector("#golgiVesicle"),
+      secretoryVesicle: document.querySelector("#secretoryVesicle")
+    };
+
+    const startPositions = {
+      ribosome: { x: 29, y: 30 },
+      transportVesicle: { x: 42, y: 64 },
+      golgiVesicle: { x: 64, y: 50 },
+      secretoryVesicle: { x: 77, y: 64 }
+    };
+
+    let currentStep = 0;
+    let isPlaying = false;
+    let isExploreMode = false;
+    let completedSteps = new Set();
+    let suppressInfoClick = false;
+
+    function setSpritePosition(sprite, x, y) {
+      sprite.style.setProperty("--x", `${x}%`);
+      sprite.style.setProperty("--y", `${y}%`);
+    }
+
+    function setProteinPosition(x, y) {
+      protein.style.left = `${x}%`;
+      protein.style.top = `${y}%`;
+    }
+
+    function setAssetState(asset, state = {}) {
+      if (state.x !== undefined) asset.style.setProperty("--x", `${state.x}%`);
+      if (state.y !== undefined) asset.style.setProperty("--y", `${state.y}%`);
+      if (state.scale !== undefined) asset.style.setProperty("--scale", state.scale);
+      if (state.alpha !== undefined) asset.style.setProperty("--alpha", state.alpha);
+    }
+
+    function setVesicleVisibility(visibility = {}) {
+      sprites.transportVesicle.classList.toggle("is-hidden", !visibility.transport);
+      sprites.golgiVesicle.classList.toggle("is-hidden", !visibility.golgi);
+      sprites.secretoryVesicle.classList.toggle("is-hidden", !visibility.secretory);
+    }
+
+    function setTargetRing(target, success = false) {
+      targetRing.classList.remove("is-visible", "is-success");
+      if (!target) return;
+      targetRing.style.setProperty("--x", `${target.x}%`);
+      targetRing.style.setProperty("--y", `${target.y}%`);
+      targetRing.style.setProperty("--size", `${target.size || 7}%`);
+      targetRing.classList.add(success ? "is-success" : "is-visible");
+    }
+
+    function updateTaskCard(step) {
+      if (!isExploreMode) {
+        taskCard.classList.remove("is-visible");
+        taskCard.innerHTML = "";
+        setTargetRing(null);
+        return;
+      }
+
+      if (completedSteps.size === steps.length) {
+        taskCard.innerHTML = `<strong>探索完成</strong>分泌蛋白已经完成合成、加工、运输和胞吐释放。`;
+        taskCard.classList.add("is-visible");
+        setTargetRing(null);
+        return;
+      }
+
+      if (step.target) {
+        taskCard.innerHTML = `<strong>当前任务</strong>${step.target.text}`;
+        setTargetRing(step.target);
+      } else {
+        taskCard.innerHTML = `<strong>观察任务</strong>${step.desc}`;
+        setTargetRing(null);
+      }
+      taskCard.classList.add("is-visible");
+    }
+
+    function markStepDone(index) {
+      completedSteps.add(index);
+      document.querySelectorAll(".step").forEach((node, nodeIndex) => {
+        node.classList.toggle("is-done", completedSteps.has(nodeIndex));
+      });
+    }
+
+    function findNextUnfinishedStep(fromIndex = 0) {
+      for (let index = fromIndex; index < steps.length; index += 1) {
+        if (!completedSteps.has(index)) return index;
+      }
+      return steps.length - 1;
+    }
+
+    function updateStep(index, moveActor = true) {
+      currentStep = Math.max(0, Math.min(index, steps.length - 1));
+      const step = steps[currentStep];
+
+      stepLabel.textContent = `第 ${currentStep + 1} 步 / ${steps.length}`;
+      stepTitle.textContent = step.title;
+      stepDesc.textContent = step.desc;
+      progressBar.style.setProperty("--progress", `${((currentStep + 1) / steps.length) * 100}%`);
+
+      document.querySelectorAll(".step").forEach((node, nodeIndex) => {
+        node.classList.toggle("is-active", nodeIndex === currentStep);
+        node.classList.toggle("is-done", completedSteps.has(nodeIndex));
+      });
+
+      Object.values(sprites).forEach((sprite) => {
+        sprite.classList.toggle("is-current", sprite.id === step.actor);
+        sprite.classList.toggle("is-muted", sprite.id !== step.actor && stage.classList.contains("is-focus-mode"));
+      });
+      sprites.ribosome.classList.remove("is-hidden");
+      setVesicleVisibility(step.vesicles);
+
+      document.querySelectorAll(".organ").forEach((organ) => {
+        organ.classList.toggle("is-active", organ.dataset.organ === step.organ);
+      });
+
+      if (moveActor && step.actor) {
+        setSpritePosition(sprites[step.actor], step.x, step.y);
+      }
+      setAssetState(peptideChain, step.peptide);
+      setAssetState(foldedProtein, step.folded);
+      setProteinPosition(step.x, step.y);
+      protein.classList.remove("is-visible", "is-exocytosis");
+      exocytosisBurst.classList.remove("is-playing");
+
+      if (currentStep === steps.length - 1) {
+        exocytosisBurst.classList.add("is-playing");
+      }
+
+      updateTaskCard(step);
+    }
+
+    function buildStepList() {
+      steps.forEach((step, index) => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "step";
+        item.innerHTML = `<b>${index + 1}</b><span>${step.title}</span>`;
+        item.addEventListener("click", () => updateStep(index));
+        stepList.appendChild(item);
+      });
+    }
+
+    function showOrganelleInfo(id) {
+      const info = organelleInfo[id];
+      if (!info) return;
+      organelleCard.classList.remove("is-visible", "is-closing");
+      void organelleCard.offsetWidth;
+      organelleCard.innerHTML = `
+        <div class="card-head">
+          <h3>${info.title}</h3>
+          <button class="card-close" type="button" aria-label="关闭说明">×</button>
+        </div>
+        <p>${info.desc}</p>
+      `;
+      organelleCard.classList.add("is-visible");
+      organelleCard.querySelector(".card-close").addEventListener("click", closeOrganelleInfo);
+      document.querySelectorAll(".organ").forEach((organ) => {
+        organ.classList.toggle("is-active", organ.dataset.organ === id && id !== "nucleus");
+      });
+    }
+
+    function closeOrganelleInfo() {
+      organelleCard.classList.remove("is-visible");
+      organelleCard.classList.add("is-closing");
+      window.setTimeout(() => {
+        organelleCard.classList.remove("is-closing");
+        organelleCard.innerHTML = "";
+        document.querySelectorAll(".organ").forEach((organ) => organ.classList.remove("is-active"));
+      }, 230);
+    }
+
+    function animateSprite(sprite, from, to, duration = 900) {
+      return new Promise((resolve) => {
+        const start = performance.now();
+        function frame(now) {
+          const raw = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - raw, 3);
+          const x = from.x + (to.x - from.x) * eased;
+          const y = from.y + (to.y - from.y) * eased;
+          setSpritePosition(sprite, x, y);
+          setProteinPosition(x, y);
+          if (raw < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            resolve();
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function animateAsset(asset, from, to, duration = 900) {
+      return new Promise((resolve) => {
+        const start = performance.now();
+        function frame(now) {
+          const raw = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - raw, 3);
+          const next = {};
+          ["x", "y", "scale", "alpha"].forEach((key) => {
+            if (from[key] !== undefined && to[key] !== undefined) {
+              next[key] = from[key] + (to[key] - from[key]) * eased;
+            }
+          });
+          setAssetState(asset, next);
+          if (raw < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            resolve();
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    async function playAll() {
+      if (isPlaying) return;
+      if (isExploreMode) toggleExploreMode(false);
+      isPlaying = true;
+      playBtn.textContent = "播放中...";
+      resetSprites();
+      sprites.ribosome.classList.remove("is-hidden");
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
+
+      updateStep(0, false);
+      setAssetState(peptideChain, { x: 33, y: 32, scale: 0.12, alpha: 1 });
+      await animateAsset(peptideChain, { x: 33, y: 32, scale: 0.12, alpha: 1 }, { x: 33, y: 32, scale: 0.46, alpha: 1 }, 950);
+      await wait(700);
+
+      updateStep(1, false);
+      await Promise.all([
+        animateSprite(sprites.ribosome, { x: 29, y: 30 }, { x: 35, y: 58 }, 1050),
+        animateAsset(peptideChain, { x: 33, y: 32, scale: 0.46, alpha: 1 }, { x: 39, y: 61, scale: 0.72, alpha: 1 }, 1050)
+      ]);
+      await Promise.all([
+        animateAsset(peptideChain, { x: 39, y: 61, scale: 0.72, alpha: 1 }, { x: 39, y: 61, scale: 0.42, alpha: 0.28 }, 850),
+        animateAsset(foldedProtein, { x: 39, y: 62, scale: 0.2, alpha: 0 }, { x: 39, y: 62, scale: 1, alpha: 1 }, 850)
+      ]);
+      await wait(850);
+
+      updateStep(2, false);
+      setSpritePosition(sprites.transportVesicle, 42, 64);
+      setVesicleVisibility({ transport: 1, golgi: 0, secretory: 0 });
+      await Promise.all([
+        animateSprite(sprites.transportVesicle, { x: 42, y: 64 }, { x: 60, y: 51 }, 1180),
+        animateAsset(foldedProtein, { x: 39, y: 62, scale: 1, alpha: 1 }, { x: 60, y: 51, scale: 0.8, alpha: 0 }, 1180)
+      ]);
+      await wait(750);
+
+      updateStep(3, false);
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
+      await animateAsset(foldedProtein, { x: 60, y: 51, scale: 0.8, alpha: 0 }, { x: 64, y: 50, scale: 1.15, alpha: 1 }, 850);
+      await wait(700);
+
+      updateStep(4, false);
+      setSpritePosition(sprites.secretoryVesicle, 70, 55);
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 1 });
+      await Promise.all([
+        animateSprite(sprites.secretoryVesicle, { x: 70, y: 55 }, { x: 77, y: 64 }, 900),
+        animateAsset(foldedProtein, { x: 64, y: 50, scale: 1.15, alpha: 1 }, { x: 77, y: 64, scale: 0.55, alpha: 0 }, 900)
+      ]);
+      await wait(700);
+
+      updateStep(5, false);
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 1 });
+      await Promise.all([
+        animateSprite(sprites.secretoryVesicle, { x: 77, y: 64 }, { x: 89, y: 40 }, 1200),
+        animateAsset(foldedProtein, { x: 77, y: 64, scale: 0.55, alpha: 0 }, { x: 89, y: 40, scale: 0.55, alpha: 0 }, 1200)
+      ]);
+      exocytosisBurst.classList.remove("is-playing");
+      void exocytosisBurst.offsetWidth;
+      exocytosisBurst.classList.add("is-playing");
+      await Promise.all([
+        animateAsset(foldedProtein, { x: 89, y: 40, scale: 0.55, alpha: 0 }, { x: 94, y: 34, scale: 1, alpha: 1 }, 900),
+        animateAsset(sprites.secretoryVesicle, { x: 89, y: 40, scale: 1, alpha: 1 }, { x: 89, y: 40, scale: 1.45, alpha: 0 }, 900)
+      ]);
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
+
+      isPlaying = false;
+      playBtn.textContent = "重新播放";
+    }
+
+    function wait(ms) {
+      return new Promise((resolve) => window.setTimeout(resolve, ms));
+    }
+
+    function resetSprites() {
+      completedSteps.clear();
+      Object.entries(startPositions).forEach(([id, pos]) => {
+        setSpritePosition(sprites[id], pos.x, pos.y);
+      });
+      Object.values(sprites).forEach((sprite) => {
+        sprite.style.setProperty("--scale", 1);
+        sprite.style.setProperty("--alpha", 1);
+      });
+      setAssetState(peptideChain, { x: 33, y: 32, scale: 0.18, alpha: 0 });
+      setAssetState(foldedProtein, { x: 39, y: 62, scale: 0.2, alpha: 0 });
+      exocytosisBurst.classList.remove("is-playing");
+      setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
+      protein.classList.remove("is-exocytosis");
+      updateStep(0, false);
+    }
+
+    function toggleExploreMode(forceState) {
+      isExploreMode = typeof forceState === "boolean" ? forceState : !isExploreMode;
+      stage.classList.toggle("is-explore-mode", isExploreMode);
+      exploreBtn.textContent = isExploreMode ? "退出探索" : "探索模式";
+      exploreBtn.setAttribute("aria-pressed", String(isExploreMode));
+      completedSteps.clear();
+      resetSprites();
+      if (isExploreMode) {
+        playBtn.textContent = "播放全过程";
+        updateStep(0, false);
+      }
+    }
+
+    function distancePercent(a, b) {
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    }
+
+    async function handleExploreDrop(sprite) {
+      if (!isExploreMode || isPlaying) return;
+      const step = steps[currentStep];
+      const target = step.target;
+      if (!target || target.actor !== sprite.id) return;
+
+      const x = parseFloat(sprite.style.getPropertyValue("--x"));
+      const y = parseFloat(sprite.style.getPropertyValue("--y"));
+      const hit = distancePercent({ x, y }, target) <= 6.5;
+
+      if (!hit) {
+        taskCard.innerHTML = `<strong>还差一点</strong>${target.text}`;
+        await animateSprite(sprite, { x, y }, { x: step.x, y: step.y }, 320);
+        return;
+      }
+
+      setTargetRing(target, true);
+      markStepDone(currentStep);
+      setSpritePosition(sprite, target.x, target.y);
+      await wait(360);
+
+      if (currentStep === 0) {
+        updateStep(1, false);
+        markStepDone(1);
+        await wait(900);
+        updateStep(2, false);
+      } else if (currentStep === 2) {
+        updateStep(3, false);
+        markStepDone(3);
+        await wait(900);
+        updateStep(4, false);
+      } else if (currentStep === 4) {
+        updateStep(5, false);
+        completedSteps = new Set(steps.map((_, index) => index));
+        document.querySelectorAll(".step").forEach((node) => node.classList.add("is-done"));
+        taskCard.innerHTML = `<strong>探索完成</strong>囊泡与细胞膜融合，蛋白质被释放到细胞外。`;
+      } else {
+        updateStep(findNextUnfinishedStep(currentStep + 1), false);
+      }
+    }
+
+    function makeDraggable(sprite) {
+      let dragging = false;
+      let dragStart = null;
+      let hasMoved = false;
+
+      function moveToClient(clientX, clientY) {
+        if (!dragging || isPlaying || !isExploreMode) return;
+        if (dragStart && Math.hypot(clientX - dragStart.x, clientY - dragStart.y) > 4) {
+          hasMoved = true;
+        }
+        const rect = stage.getBoundingClientRect();
+        const x = ((clientX - rect.left) / rect.width) * 100;
+        const y = ((clientY - rect.top) / rect.height) * 100;
+        setSpritePosition(sprite, Math.max(2, Math.min(98, x)), Math.max(2, Math.min(98, y)));
+      }
+
+      function startDrag(clientX, clientY) {
+        if (isPlaying || !isExploreMode) return;
+        dragging = true;
+        hasMoved = false;
+        dragStart = { x: clientX, y: clientY };
+        sprite.classList.add("is-dragging");
+      }
+
+      function endDrag() {
+        if (!dragging) return;
+        dragging = false;
+        sprite.classList.remove("is-dragging");
+        if (hasMoved) {
+          suppressInfoClick = true;
+          window.setTimeout(() => {
+            suppressInfoClick = false;
+          }, 80);
+          handleExploreDrop(sprite);
+        }
+        dragStart = null;
+      }
+
+      sprite.addEventListener("pointerdown", (event) => {
+        if (!isExploreMode) return;
+        event.preventDefault();
+        startDrag(event.clientX, event.clientY);
+        sprite.setPointerCapture(event.pointerId);
+      });
+
+      sprite.addEventListener("pointermove", (event) => {
+        moveToClient(event.clientX, event.clientY);
+      });
+
+      sprite.addEventListener("pointerup", (event) => {
+        sprite.releasePointerCapture(event.pointerId);
+        endDrag();
+      });
+
+      sprite.addEventListener("pointercancel", () => {
+        endDrag();
+      });
+
+      sprite.addEventListener("mousedown", (event) => {
+        if (!isExploreMode) return;
+        event.preventDefault();
+        startDrag(event.clientX, event.clientY);
+        moveToClient(event.clientX, event.clientY);
+      });
+
+      window.addEventListener("mousemove", (event) => {
+        moveToClient(event.clientX, event.clientY);
+      });
+
+      window.addEventListener("mouseup", () => {
+        endDrag();
+      });
+    }
+
+    buildStepList();
+    document.querySelectorAll(".organ-label").forEach((label) => {
+      label.addEventListener("click", () => showOrganelleInfo(label.dataset.info));
+    });
+    document.querySelectorAll("[data-info]:not(.organ-label)").forEach((node) => {
+      node.addEventListener("click", (event) => {
+        if (node.classList.contains("sprite") && suppressInfoClick) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        showOrganelleInfo(node.dataset.info);
+      });
+    });
+    Object.values(sprites).forEach(makeDraggable);
+    updateStep(0, false);
+
+    exploreBtn.addEventListener("click", () => toggleExploreMode());
+    playBtn.addEventListener("click", playAll);
+    nextBtn.addEventListener("click", () => updateStep((currentStep + 1) % steps.length));
+    routeBtn.addEventListener("click", () => {
+      const hidden = stage.classList.toggle("is-route-hidden");
+      routeBtn.textContent = hidden ? "显示路线" : "隐藏路线";
+      routeBtn.setAttribute("aria-pressed", String(!hidden));
+    });
+    resetBtn.addEventListener("click", resetSprites);
+  </script>
+</body>
+</html>

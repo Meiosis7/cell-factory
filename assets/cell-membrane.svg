@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 420">
+  <defs>
+    <clipPath id="clip"><rect x="10" y="10" width="170" height="400" rx="45"/></clipPath>
+    <filter id="shadow" x="-25%" y="-15%" width="150%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#273244" flood-opacity=".25"/>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="174" height="404" rx="47" fill="rgba(255,255,255,.32)" filter="url(#shadow)"/>
+  <image href="../cell-map.png" x="-862" y="-68" width="1024" height="559" clip-path="url(#clip)"/>
+  <rect x="10" y="10" width="170" height="400" rx="45" fill="none" stroke="white" stroke-width="6"/>
+</svg>
