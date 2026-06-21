@@ -652,17 +652,6 @@
       font-size: 13px;
     }
 
-    .task-action {
-      margin-top: 10px;
-      min-height: 34px;
-      padding: 0 13px;
-      color: #fff;
-      background: linear-gradient(135deg, #1497a8, #35a96f);
-      border-color: rgba(36, 48, 68, 0.68);
-      box-shadow: 0 4px 0 rgba(20, 102, 88, 0.34), 0 8px 16px rgba(20, 151, 168, 0.16);
-      font-size: 13px;
-    }
-
     .stage.is-explore-mode .sprite.is-current {
       filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.98)) drop-shadow(0 0 18px rgba(231, 95, 128, 0.4));
     }
@@ -683,7 +672,7 @@
     }
 
     .target-ring::after {
-      content: "拖到这里";
+      content: attr(data-label);
       position: absolute;
       left: 50%;
       top: calc(100% + 7px);
@@ -704,6 +693,22 @@
     .target-ring.is-visible {
       opacity: 1;
       animation: targetPulse 1s steps(4, end) infinite;
+    }
+
+    .target-ring.is-clickable {
+      cursor: pointer;
+      pointer-events: auto;
+      border-style: solid;
+      border-color: rgba(20, 151, 168, 0.88);
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.45), 0 0 24px rgba(20, 151, 168, 0.3);
+    }
+
+    .target-ring.is-clickable::after {
+      background: #1497a8;
+    }
+
+    .target-ring.is-clickable:hover {
+      filter: saturate(1.08);
     }
 
     .target-ring.is-success {
@@ -1082,6 +1087,7 @@
         x: 35,
         y: 58,
         target: null,
+        processTarget: { x: 39, y: 62, size: 9, label: "点击加工", text: "点击地图上的加工圈，完成内质网中的合成、加工和折叠。" },
         peptide: { x: 39, y: 61, scale: 0.45, alpha: 0.25 },
         folded: { x: 39, y: 62, scale: 1, alpha: 1 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
@@ -1106,6 +1112,7 @@
         x: 60,
         y: 51,
         target: null,
+        processTarget: { x: 64, y: 50, size: 9, label: "点击加工", text: "点击地图上的加工圈，完成高尔基体中的修饰、分类和包装。" },
         peptide: { alpha: 0 },
         folded: { x: 64, y: 50, scale: 1.05, alpha: 1 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
@@ -1179,13 +1186,16 @@
       sprites.secretoryVesicle.classList.toggle("is-hidden", !visibility.secretory);
     }
 
-    function setTargetRing(target, success = false) {
-      targetRing.classList.remove("is-visible", "is-success");
+    function setTargetRing(target, success = false, clickable = false) {
+      targetRing.classList.remove("is-visible", "is-success", "is-clickable");
       if (!target) return;
       targetRing.style.setProperty("--x", `${target.x}%`);
       targetRing.style.setProperty("--y", `${target.y}%`);
       targetRing.style.setProperty("--size", `${target.size || 7}%`);
+      targetRing.dataset.label = target.label || "拖到这里";
+      targetRing.setAttribute("aria-label", target.label || "拖到这里");
       targetRing.classList.add(success ? "is-success" : "is-visible");
+      targetRing.classList.toggle("is-clickable", clickable);
     }
 
     function updateTaskCard(step) {
@@ -1209,13 +1219,9 @@
       if (step.target) {
         taskCard.innerHTML = `<strong>当前任务</strong>${step.target.text}`;
         setTargetRing(step.target);
-      } else if ((currentStep === 1 || currentStep === 3) && !completedSteps.has(currentStep)) {
-        const label = currentStep === 1 ? "完成内质网加工" : "完成高尔基体加工";
-        taskCard.innerHTML = `
-          <strong>加工任务</strong>${step.desc}
-          <button class="task-action" type="button">${label}</button>
-        `;
-        setTargetRing(null);
+      } else if (step.processTarget && !completedSteps.has(currentStep)) {
+        taskCard.innerHTML = `<strong>加工任务</strong>${step.processTarget.text}`;
+        setTargetRing(step.processTarget, false, true);
       } else {
         taskCard.innerHTML = `<strong>观察任务</strong>${step.desc}`;
         setTargetRing(null);
@@ -1614,8 +1620,8 @@
         showOrganelleInfo(node.dataset.info);
       });
     });
-    taskCard.addEventListener("click", (event) => {
-      if (event.target.closest(".task-action")) {
+    targetRing.addEventListener("click", () => {
+      if (targetRing.classList.contains("is-clickable")) {
         completeProcessingStep();
       }
     });
