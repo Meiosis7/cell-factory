@@ -89,6 +89,13 @@
       filter: saturate(1.05);
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+      transform: none;
+      filter: grayscale(0.12);
+    }
+
     .primary {
       color: #fff;
       background: linear-gradient(135deg, #138da0, #17b29d);
@@ -565,6 +572,11 @@
       box-shadow: 0 3px 0 rgba(36, 48, 68, 0.1);
     }
 
+    .step:disabled {
+      cursor: default;
+      opacity: 1;
+    }
+
     .step b {
       display: grid;
       place-items: center;
@@ -670,6 +682,25 @@
       box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.45), 0 0 22px rgba(231, 95, 128, 0.24);
     }
 
+    .target-ring::after {
+      content: "拖到这里";
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 7px);
+      transform: translateX(-50%);
+      min-width: 64px;
+      padding: 4px 8px 5px;
+      border-radius: 999px;
+      border: 2px solid rgba(36, 48, 68, 0.64);
+      color: #fff;
+      background: #e75f80;
+      box-shadow: 0 3px 0 rgba(36, 48, 68, 0.16);
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
     .target-ring.is-visible {
       opacity: 1;
       animation: targetPulse 1s steps(4, end) infinite;
@@ -678,6 +709,17 @@
     .target-ring.is-success {
       border-color: rgba(53, 169, 111, 0.88);
       animation: targetSuccess 420ms steps(4, end) both;
+    }
+
+    .summary-path {
+      margin-top: 9px;
+      padding: 9px 10px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.62);
+      color: #244350;
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1.6;
     }
 
     @keyframes pulse {
@@ -1155,7 +1197,10 @@
       }
 
       if (completedSteps.size === steps.length) {
-        taskCard.innerHTML = `<strong>探索完成</strong>分泌蛋白已经完成合成、加工、运输和胞吐释放。`;
+        taskCard.innerHTML = `
+          <strong>探索完成</strong>分泌蛋白已经完成合成、加工、运输和胞吐释放。
+          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 分泌小泡 → 细胞膜胞吐</div>
+        `;
         taskCard.classList.add("is-visible");
         setTargetRing(null);
         return;
@@ -1176,6 +1221,13 @@
         setTargetRing(null);
       }
       taskCard.classList.add("is-visible");
+    }
+
+    function setExploreControls() {
+      nextBtn.disabled = isExploreMode;
+      document.querySelectorAll(".step").forEach((node) => {
+        node.disabled = isExploreMode;
+      });
     }
 
     function markStepDone(index) {
@@ -1239,7 +1291,10 @@
         item.type = "button";
         item.className = "step";
         item.innerHTML = `<b>${index + 1}</b><span>${step.title}</span>`;
-        item.addEventListener("click", () => updateStep(index));
+        item.addEventListener("click", () => {
+          if (isExploreMode) return;
+          updateStep(index);
+        });
         stepList.appendChild(item);
       });
     }
@@ -1411,6 +1466,7 @@
       exploreBtn.setAttribute("aria-pressed", String(isExploreMode));
       completedSteps.clear();
       resetSprites();
+      setExploreControls();
       if (isExploreMode) {
         playBtn.textContent = "播放全过程";
         updateStep(0, false);
@@ -1450,7 +1506,10 @@
         updateStep(5, false);
         completedSteps = new Set(steps.map((_, index) => index));
         document.querySelectorAll(".step").forEach((node) => node.classList.add("is-done"));
-        taskCard.innerHTML = `<strong>探索完成</strong>囊泡与细胞膜融合，蛋白质被释放到细胞外。`;
+        taskCard.innerHTML = `
+          <strong>探索完成</strong>囊泡与细胞膜融合，蛋白质被释放到细胞外。
+          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 分泌小泡 → 细胞膜胞吐</div>
+        `;
       } else {
         updateStep(findNextUnfinishedStep(currentStep + 1), false);
       }
@@ -1562,10 +1621,14 @@
     });
     Object.values(sprites).forEach(makeDraggable);
     updateStep(0, false);
+    setExploreControls();
 
     exploreBtn.addEventListener("click", () => toggleExploreMode());
     playBtn.addEventListener("click", playAll);
-    nextBtn.addEventListener("click", () => updateStep((currentStep + 1) % steps.length));
+    nextBtn.addEventListener("click", () => {
+      if (isExploreMode) return;
+      updateStep((currentStep + 1) % steps.length);
+    });
     routeBtn.addEventListener("click", () => {
       const hidden = stage.classList.toggle("is-route-hidden");
       routeBtn.textContent = hidden ? "显示路线" : "隐藏路线";
