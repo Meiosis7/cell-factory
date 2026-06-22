@@ -4,3 +4,5 @@ Thumbs.db
 # Generated experiment assets that are not used by the current page
 ai-assets/animated/
 
+# Local inspection outputs
+tmp/

@@ -985,9 +985,9 @@
       <img class="decor" data-info="mitochondrion" src="ai-assets/mitochondrion.png" alt="线粒体素材" style="--x: 58%; --y: 82%; --w: 12%;">
 
       <img id="ribosome" class="sprite" data-info="ribosome" src="ai-assets/ribosome.png" alt="可移动核糖体" draggable="false" style="--x: 29%; --y: 30%; --size: 5.6%; --delay: .25s;">
-      <div id="transportVesicle" class="sprite vesicle" role="img" aria-label="中空运输小泡" style="--x: 36%; --y: 66%; --size: 7.2%; --cargo-scale: .86; --delay: .2s;"></div>
-      <div id="golgiVesicle" class="sprite vesicle" role="img" aria-label="中空高尔基体运输小泡" style="--x: 62%; --y: 52%; --size: 7.2%; --cargo-scale: .9; --delay: .45s;"></div>
-      <div id="secretoryVesicle" class="sprite vesicle" role="img" aria-label="中空分泌小泡" style="--x: 77%; --y: 64%; --size: 7.8%; --cargo-scale: 1; --delay: .7s;"></div>
+      <div id="transportVesicle" class="sprite vesicle" role="img" aria-label="中空运输囊泡" style="--x: 36%; --y: 66%; --size: 7.2%; --cargo-scale: .86; --delay: .2s;"></div>
+      <div id="golgiVesicle" class="sprite vesicle" role="img" aria-label="中空高尔基体运输囊泡" style="--x: 62%; --y: 52%; --size: 7.2%; --cargo-scale: .9; --delay: .45s;"></div>
+      <div id="secretoryVesicle" class="sprite vesicle" role="img" aria-label="中空囊泡" style="--x: 77%; --y: 64%; --size: 7.8%; --cargo-scale: 1; --delay: .7s;"></div>
       <img id="peptideChain" class="process-asset peptide-chain" src="ai-assets/peptide-chain.png" alt="正在合成的肽链" style="--x: 35%; --y: 32%; --size: 6.5%; --scale: .18; --alpha: 0;">
       <div id="foldedProtein" class="process-asset folded-protein" aria-label="盘曲折叠的蛋白结构" style="--x: 36%; --y: 61%; --size: 5.2%; --scale: .2; --alpha: 0;"></div>
       <div id="exocytosisBurst" class="exocytosis-burst" aria-hidden="true" style="--x: 89%; --y: 40%; --size: 7%;"></div>
@@ -1007,7 +1007,7 @@
       <div class="hud-main">
         <span id="stepLabel" class="step-label">第 1 步 / 6</span>
         <h2 id="stepTitle">游离核糖体</h2>
-        <p id="stepDesc">核糖体读取 mRNA 信息，合成分泌蛋白的多肽链。你可以拖动核糖体，观察它作为“合成起点”的位置。</p>
+        <p id="stepDesc">核糖体读取 mRNA 信息，合成分泌蛋白的多肽链。进入探索模式后可拖动核糖体，观察它作为“合成起点”的位置。</p>
         <div id="taskCard" class="task-card" role="status" aria-live="polite"></div>
       </div>
       <div id="stepList" class="steps"></div>
@@ -1049,11 +1049,11 @@
       },
       golgi: {
         title: "高尔基体",
-        desc: "主要对来自内质网的蛋白质进行加工、分类和包装，是车间及发送站。"
+        desc: "对来自内质网的蛋白质进行加工、分类和包装，是蛋白质的“加工车间”和“发送站”。"
       },
       "cell-membrane": {
         title: "细胞膜",
-        desc: "参与物质运输、能量转化和信息传递。分泌小泡与细胞膜融合后，将蛋白质分泌到细胞外。"
+        desc: "参与物质运输、能量转化和信息传递。囊泡与细胞膜融合后，将蛋白质分泌到细胞外。"
       },
       mitochondrion: {
         title: "线粒体",
@@ -1074,20 +1074,20 @@
         organ: "",
         x: 29,
         y: 30,
-        target: { actor: "ribosome", x: 35, y: 58, size: 7, text: "拖动核糖体到粗面内质网上，开始进入内质网继续合成。" },
+        target: { actor: "ribosome", x: 35, y: 58, size: 7, text: "拖动核糖体到粗面内质网上，使肽链进入内质网继续合成。" },
         peptide: { x: 33, y: 32, scale: 0.42, alpha: 1 },
         folded: { alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
         title: "内质网加工",
-        desc: "肽链与核糖体一起转移到粗面内质网上继续合成，边合成边进入内质网腔，并加工、折叠成蛋白质。",
+        desc: "核糖体转移到粗面内质网上继续合成肽链，肽链边合成边进入内质网腔，再经过加工、折叠，形成具有一定空间结构的蛋白质。",
         actor: "ribosome",
         organ: "rough-er",
         x: 35,
         y: 58,
         target: null,
-        processTarget: { x: 39, y: 62, size: 9, label: "点击加工", text: "点击地图上的加工圈，完成内质网中的合成、加工和折叠。" },
+        processTarget: { x: 39, y: 62, size: 9, label: "点击加工", text: "点击地图上的加工圈，使肽链在内质网中完成加工、折叠。" },
         peptide: { x: 39, y: 61, scale: 0.72, alpha: 1 },
         folded: { x: 39, y: 62, scale: 0.2, alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
@@ -1099,32 +1099,32 @@
         organ: "rough-er",
         x: 42,
         y: 64,
-        target: { actor: "transportVesicle", x: 60, y: 51, size: 8, text: "把运输小泡送到高尔基体，让蛋白质进入下一站加工。" },
+        target: { actor: "transportVesicle", x: 60, y: 51, size: 8, text: "把囊泡送到高尔基体，让蛋白质进入下一站加工。" },
         peptide: { alpha: 0 },
         folded: { x: 42, y: 64, scale: 0.55, alpha: 0 },
         vesicles: { transport: 1, golgi: 0, secretory: 0 }
       },
       {
         title: "高尔基体加工",
-        desc: "囊泡与高尔基体膜融合，蛋白质进入高尔基体后继续修饰、分类和包装。",
+        desc: "囊泡与高尔基体膜融合，蛋白质进入高尔基体后进一步修饰、分类和包装。",
         actor: "golgiVesicle",
         organ: "golgi",
         x: 60,
         y: 51,
         target: null,
-        processTarget: { x: 64, y: 50, size: 9, label: "点击加工", text: "点击地图上的加工圈，完成高尔基体中的修饰、分类和包装。" },
+        processTarget: { x: 64, y: 50, size: 9, label: "点击加工", text: "点击地图上的加工圈，对蛋白质做进一步的修饰加工。" },
         peptide: { alpha: 0 },
         folded: { x: 64, y: 50, scale: 1.05, alpha: 1 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
-        title: "分泌小泡运输",
+        title: "囊泡运输",
         desc: "高尔基体膜再次形成包裹蛋白质的囊泡，将蛋白质运往细胞膜。",
         actor: "secretoryVesicle",
         organ: "golgi",
         x: 77,
         y: 64,
-        target: { actor: "secretoryVesicle", x: 89, y: 40, size: 8, text: "把分泌小泡拖到细胞膜，准备膜融合并释放蛋白质。" },
+        target: { actor: "secretoryVesicle", x: 89, y: 40, size: 8, text: "把囊泡拖到细胞膜，准备膜融合并释放蛋白质。" },
         peptide: { alpha: 0 },
         folded: { x: 77, y: 64, scale: 0.55, alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 1 }
@@ -1209,7 +1209,7 @@
       if (completedSteps.size === steps.length) {
         taskCard.innerHTML = `
           <strong>探索完成</strong>分泌蛋白已经完成合成、加工、运输和胞吐释放。
-          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 分泌小泡 → 细胞膜胞吐</div>
+          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 囊泡 → 细胞膜胞吐</div>
         `;
         taskCard.classList.add("is-visible");
         setTargetRing(null);
@@ -1514,7 +1514,7 @@
         document.querySelectorAll(".step").forEach((node) => node.classList.add("is-done"));
         taskCard.innerHTML = `
           <strong>探索完成</strong>囊泡与细胞膜融合，蛋白质被释放到细胞外。
-          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 分泌小泡 → 细胞膜胞吐</div>
+          <div class="summary-path">游离核糖体 → 粗面内质网 → 囊泡 → 高尔基体 → 囊泡 → 细胞膜胞吐</div>
         `;
       } else {
         updateStep(findNextUnfinishedStep(currentStep + 1), false);
