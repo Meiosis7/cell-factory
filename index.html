@@ -445,35 +445,8 @@
     .folded-protein {
       width: var(--size);
       aspect-ratio: 1;
-      border-radius: 42% 58% 52% 48%;
-      background:
-        radial-gradient(circle at 34% 30%, #ffffff 0 8%, transparent 9%),
-        radial-gradient(circle at 35% 37%, #ffe27d 0 9%, transparent 10%),
-        radial-gradient(circle at 60% 33%, #f58a8d 0 10%, transparent 11%),
-        radial-gradient(circle at 48% 62%, #7bc7e1 0 11%, transparent 12%),
-        radial-gradient(circle at 70% 68%, #b795df 0 9%, transparent 10%),
-        conic-gradient(from 20deg, #f7b0b8, #ffe27d, #7bc7e1, #b795df, #f7b0b8);
-      box-shadow: 0 0 16px rgba(255, 255, 255, 0.62), 0 8px 12px rgba(24, 44, 60, 0.14);
+      object-fit: contain;
       animation: foldedIdle 3s steps(4, end) infinite;
-    }
-
-    .folded-protein::before,
-    .folded-protein::after {
-      content: "";
-      position: absolute;
-      inset: 18%;
-      border: 4px solid rgba(86, 78, 139, 0.55);
-      border-left-color: transparent;
-      border-bottom-color: transparent;
-      border-radius: 50%;
-      transform: rotate(25deg);
-    }
-
-    .folded-protein::after {
-      inset: 30%;
-      border-color: rgba(43, 137, 154, 0.55);
-      border-right-color: transparent;
-      transform: rotate(-35deg);
     }
 
     .exocytosis-burst {
@@ -491,8 +464,32 @@
       box-shadow: 0 0 0 0 rgba(255, 166, 54, 0.5), 0 0 22px rgba(255, 166, 54, 0.7);
     }
 
+    .exocytosis-burst::before,
+    .exocytosis-burst::after {
+      content: "";
+      position: absolute;
+      inset: 16%;
+      border-radius: 50%;
+      border: 4px solid rgba(75, 178, 210, 0.62);
+      border-left-color: transparent;
+      border-bottom-color: transparent;
+      transform: rotate(20deg);
+    }
+
+    .exocytosis-burst::after {
+      inset: 32%;
+      border-color: rgba(255, 179, 69, 0.72);
+      border-right-color: transparent;
+      transform: rotate(-28deg);
+    }
+
     .exocytosis-burst.is-playing {
       animation: burst 980ms ease-out forwards;
+    }
+
+    .vesicle.is-fusing {
+      animation: vesicleFuse 980ms steps(5, end) forwards;
+      pointer-events: none;
     }
 
     .hud {
@@ -915,6 +912,24 @@
       }
     }
 
+    @keyframes vesicleFuse {
+      0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+        filter: drop-shadow(0 12px 18px rgba(24, 44, 60, 0.28));
+      }
+      45% {
+        opacity: 0.95;
+        transform: translate(-50%, -50%) scale(1.18);
+        filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 16px rgba(75, 178, 210, 0.38));
+      }
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.55);
+        filter: drop-shadow(0 0 22px rgba(255, 179, 69, 0.15));
+      }
+    }
+
     @media (max-width: 1180px) {
       .page {
         grid-template-columns: 1fr;
@@ -989,7 +1004,7 @@
       <div id="golgiVesicle" class="sprite vesicle" role="img" aria-label="中空高尔基体运输囊泡" style="--x: 62%; --y: 52%; --size: 7.2%; --cargo-scale: .9; --delay: .45s;"></div>
       <div id="secretoryVesicle" class="sprite vesicle" role="img" aria-label="中空囊泡" style="--x: 77%; --y: 64%; --size: 7.8%; --cargo-scale: 1; --delay: .7s;"></div>
       <img id="peptideChain" class="process-asset peptide-chain" src="ai-assets/peptide-chain.png" alt="正在合成的肽链" style="--x: 35%; --y: 32%; --size: 6.5%; --scale: .18; --alpha: 0;">
-      <div id="foldedProtein" class="process-asset folded-protein" aria-label="盘曲折叠的蛋白结构" style="--x: 36%; --y: 61%; --size: 5.2%; --scale: .2; --alpha: 0;"></div>
+      <img id="foldedProtein" class="process-asset folded-protein" src="ai-assets/protein-er-processed.png" alt="加工后的蛋白质结构" style="--x: 36%; --y: 61%; --size: 7.2%; --scale: .2; --alpha: 0;">
       <div id="exocytosisBurst" class="exocytosis-burst" aria-hidden="true" style="--x: 89%; --y: 40%; --size: 7%;"></div>
       <div id="protein" class="protein" aria-hidden="true"></div>
       <div id="targetRing" class="target-ring" aria-hidden="true"></div>
@@ -1076,7 +1091,7 @@
         y: 30,
         target: { actor: "ribosome", x: 35, y: 58, size: 7, text: "拖动核糖体到粗面内质网上，使肽链进入内质网继续合成。" },
         peptide: { x: 33, y: 32, scale: 0.42, alpha: 1 },
-        folded: { alpha: 0 },
+        folded: { src: "ai-assets/protein-er-processed.png", alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
@@ -1089,7 +1104,7 @@
         target: null,
         processTarget: { x: 39, y: 62, size: 9, label: "点击加工", text: "点击地图上的加工圈，使肽链在内质网中完成加工、折叠。" },
         peptide: { x: 39, y: 61, scale: 0.72, alpha: 1 },
-        folded: { x: 39, y: 62, scale: 0.2, alpha: 0 },
+        folded: { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 0.2, alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
@@ -1101,7 +1116,7 @@
         y: 64,
         target: { actor: "transportVesicle", x: 60, y: 51, size: 8, text: "把囊泡送到高尔基体，让蛋白质进入下一站加工。" },
         peptide: { alpha: 0 },
-        folded: { x: 42, y: 64, scale: 0.55, alpha: 0 },
+        folded: { src: "ai-assets/protein-er-processed.png", x: 42, y: 64, scale: 0.55, alpha: 0 },
         vesicles: { transport: 1, golgi: 0, secretory: 0 }
       },
       {
@@ -1114,7 +1129,7 @@
         target: null,
         processTarget: { x: 64, y: 50, size: 9, label: "点击加工", text: "点击地图上的加工圈，对蛋白质做进一步的修饰加工。" },
         peptide: { alpha: 0 },
-        folded: { x: 64, y: 50, scale: 1.05, alpha: 1 },
+        folded: { src: "ai-assets/protein-er-processed.png", x: 64, y: 50, scale: 1.05, alpha: 1 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
@@ -1126,7 +1141,7 @@
         y: 64,
         target: { actor: "secretoryVesicle", x: 89, y: 40, size: 8, text: "把囊泡拖到细胞膜，准备膜融合并释放蛋白质。" },
         peptide: { alpha: 0 },
-        folded: { x: 77, y: 64, scale: 0.55, alpha: 0 },
+        folded: { src: "ai-assets/protein-golgi-processed.png", x: 77, y: 64, scale: 0.55, alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 1 }
       },
       {
@@ -1138,8 +1153,8 @@
         y: 40,
         target: null,
         peptide: { alpha: 0 },
-        folded: { x: 94, y: 34, scale: 1, alpha: 1 },
-        vesicles: { transport: 0, golgi: 0, secretory: 0 }
+        folded: { src: "ai-assets/protein-golgi-processed.png", x: 94, y: 34, scale: 1, alpha: 1 },
+        vesicles: { transport: 0, golgi: 0, secretory: 1 }
       }
     ];
 
@@ -1174,6 +1189,9 @@
     }
 
     function setAssetState(asset, state = {}) {
+      if (state.src !== undefined && asset.getAttribute("src") !== state.src) {
+        asset.setAttribute("src", state.src);
+      }
       if (state.x !== undefined) asset.style.setProperty("--x", `${state.x}%`);
       if (state.y !== undefined) asset.style.setProperty("--y", `${state.y}%`);
       if (state.scale !== undefined) asset.style.setProperty("--scale", state.scale);
@@ -1270,6 +1288,7 @@
       });
       sprites.ribosome.classList.remove("is-hidden");
       setVesicleVisibility(step.vesicles);
+      sprites.secretoryVesicle.classList.toggle("is-fusing", currentStep === steps.length - 1);
 
       document.querySelectorAll(".organ").forEach((organ) => {
         organ.classList.toggle("is-active", organ.dataset.organ === step.organ);
@@ -1356,6 +1375,7 @@
 
     function animateAsset(asset, from, to, duration = 900) {
       return new Promise((resolve) => {
+        setAssetState(asset, { src: to.src || from.src });
         const start = performance.now();
         function frame(now) {
           const raw = Math.min((now - start) / duration, 1);
@@ -1398,7 +1418,7 @@
       ]);
       await Promise.all([
         animateAsset(peptideChain, { x: 39, y: 61, scale: 0.72, alpha: 1 }, { x: 39, y: 61, scale: 0.42, alpha: 0.28 }, 850),
-        animateAsset(foldedProtein, { x: 39, y: 62, scale: 0.2, alpha: 0 }, { x: 39, y: 62, scale: 1, alpha: 1 }, 850)
+        animateAsset(foldedProtein, { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 0.2, alpha: 0 }, { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 1, alpha: 1 }, 850)
       ]);
       await wait(850);
 
@@ -1407,13 +1427,13 @@
       setVesicleVisibility({ transport: 1, golgi: 0, secretory: 0 });
       await Promise.all([
         animateSprite(sprites.transportVesicle, { x: 42, y: 64 }, { x: 60, y: 51 }, 1180),
-        animateAsset(foldedProtein, { x: 39, y: 62, scale: 1, alpha: 1 }, { x: 60, y: 51, scale: 0.8, alpha: 0 }, 1180)
+        animateAsset(foldedProtein, { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 1, alpha: 1 }, { src: "ai-assets/protein-er-processed.png", x: 60, y: 51, scale: 0.8, alpha: 0 }, 1180)
       ]);
       await wait(750);
 
       updateStep(3, false);
       setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
-      await animateAsset(foldedProtein, { x: 60, y: 51, scale: 0.8, alpha: 0 }, { x: 64, y: 50, scale: 1.15, alpha: 1 }, 850);
+      await animateAsset(foldedProtein, { src: "ai-assets/protein-golgi-processed.png", x: 60, y: 51, scale: 0.8, alpha: 0 }, { src: "ai-assets/protein-golgi-processed.png", x: 64, y: 50, scale: 1.15, alpha: 1 }, 850);
       await wait(700);
 
       updateStep(4, false);
@@ -1421,7 +1441,7 @@
       setVesicleVisibility({ transport: 0, golgi: 0, secretory: 1 });
       await Promise.all([
         animateSprite(sprites.secretoryVesicle, { x: 70, y: 55 }, { x: 77, y: 64 }, 900),
-        animateAsset(foldedProtein, { x: 64, y: 50, scale: 1.15, alpha: 1 }, { x: 77, y: 64, scale: 0.55, alpha: 0 }, 900)
+        animateAsset(foldedProtein, { src: "ai-assets/protein-golgi-processed.png", x: 64, y: 50, scale: 1.15, alpha: 1 }, { src: "ai-assets/protein-golgi-processed.png", x: 77, y: 64, scale: 0.55, alpha: 0 }, 900)
       ]);
       await wait(700);
 
@@ -1429,13 +1449,13 @@
       setVesicleVisibility({ transport: 0, golgi: 0, secretory: 1 });
       await Promise.all([
         animateSprite(sprites.secretoryVesicle, { x: 77, y: 64 }, { x: 89, y: 40 }, 1200),
-        animateAsset(foldedProtein, { x: 77, y: 64, scale: 0.55, alpha: 0 }, { x: 89, y: 40, scale: 0.55, alpha: 0 }, 1200)
+        animateAsset(foldedProtein, { src: "ai-assets/protein-golgi-processed.png", x: 77, y: 64, scale: 0.55, alpha: 0 }, { src: "ai-assets/protein-golgi-processed.png", x: 89, y: 40, scale: 0.55, alpha: 0 }, 1200)
       ]);
       exocytosisBurst.classList.remove("is-playing");
       void exocytosisBurst.offsetWidth;
       exocytosisBurst.classList.add("is-playing");
       await Promise.all([
-        animateAsset(foldedProtein, { x: 89, y: 40, scale: 0.55, alpha: 0 }, { x: 94, y: 34, scale: 1, alpha: 1 }, 900),
+        animateAsset(foldedProtein, { src: "ai-assets/protein-golgi-processed.png", x: 89, y: 40, scale: 0.55, alpha: 0 }, { src: "ai-assets/protein-golgi-processed.png", x: 94, y: 34, scale: 1, alpha: 1 }, 900),
         animateAsset(sprites.secretoryVesicle, { x: 89, y: 40, scale: 1, alpha: 1 }, { x: 89, y: 40, scale: 1.45, alpha: 0 }, 900)
       ]);
       setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
@@ -1458,7 +1478,7 @@
         sprite.style.setProperty("--alpha", 1);
       });
       setAssetState(peptideChain, { x: 33, y: 32, scale: 0.18, alpha: 0 });
-      setAssetState(foldedProtein, { x: 39, y: 62, scale: 0.2, alpha: 0 });
+      setAssetState(foldedProtein, { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 0.2, alpha: 0 });
       exocytosisBurst.classList.remove("is-playing");
       setVesicleVisibility({ transport: 0, golgi: 0, secretory: 0 });
       protein.classList.remove("is-exocytosis");
@@ -1527,12 +1547,16 @@
         isPlaying = true;
         markStepDone(1);
         setAssetState(peptideChain, { x: 39, y: 61, scale: 0.42, alpha: 0.22 });
-        setAssetState(foldedProtein, { x: 39, y: 62, scale: 1, alpha: 1 });
+        setAssetState(foldedProtein, { src: "ai-assets/protein-er-processed.png", x: 39, y: 62, scale: 1, alpha: 1 });
         await wait(520);
         isPlaying = false;
         updateStep(2, false);
       } else if (currentStep === 3) {
+        isPlaying = true;
         markStepDone(3);
+        setAssetState(foldedProtein, { src: "ai-assets/protein-golgi-processed.png", x: 64, y: 50, scale: 1.05, alpha: 1 });
+        await wait(520);
+        isPlaying = false;
         updateStep(4, false);
       }
     }
