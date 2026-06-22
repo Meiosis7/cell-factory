@@ -1088,8 +1088,8 @@
         y: 58,
         target: null,
         processTarget: { x: 39, y: 62, size: 9, label: "点击加工", text: "点击地图上的加工圈，完成内质网中的合成、加工和折叠。" },
-        peptide: { x: 39, y: 61, scale: 0.45, alpha: 0.25 },
-        folded: { x: 39, y: 62, scale: 1, alpha: 1 },
+        peptide: { x: 39, y: 61, scale: 0.72, alpha: 1 },
+        folded: { x: 39, y: 62, scale: 0.2, alpha: 0 },
         vesicles: { transport: 0, golgi: 0, secretory: 0 }
       },
       {
@@ -1521,10 +1521,15 @@
       }
     }
 
-    function completeProcessingStep() {
+    async function completeProcessingStep() {
       if (!isExploreMode || isPlaying) return;
       if (currentStep === 1) {
+        isPlaying = true;
         markStepDone(1);
+        setAssetState(peptideChain, { x: 39, y: 61, scale: 0.42, alpha: 0.22 });
+        setAssetState(foldedProtein, { x: 39, y: 62, scale: 1, alpha: 1 });
+        await wait(520);
+        isPlaying = false;
         updateStep(2, false);
       } else if (currentStep === 3) {
         markStepDone(3);
