@@ -62,11 +62,41 @@
       text-shadow: 3px 3px 0 rgba(255, 255, 255, 0.86);
     }
 
+    .title-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .source-pill {
+      width: fit-content;
+      margin: 0;
+      padding: 7px 14px;
+      border: 2px solid rgba(95, 178, 228, 0.7);
+      border-radius: 999px;
+      color: #17728e;
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 3px 0 rgba(54, 123, 161, 0.16);
+      font-size: clamp(12px, 1.25vw, 15px);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
     .controls {
       display: flex;
       gap: 9px;
       flex-wrap: wrap;
       justify-content: flex-end;
+    }
+
+    .study-tip {
+      margin: 12px 0 0;
+      padding: 9px 12px;
+      border-radius: 12px;
+      color: #416170;
+      background: rgba(232, 248, 252, 0.82);
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.45;
     }
 
     button {
@@ -942,7 +972,10 @@
 <body>
   <main class="page">
     <header class="header">
-      <h1>分泌蛋白动态运输地图</h1>
+      <div class="title-block">
+        <h1>分泌蛋白动态运输地图</h1>
+        <p class="source-pill">一到儿《高中生物一本通》 · 必修1 · 参考：物质的跨膜运输方式</p>
+      </div>
       <div class="controls">
         <button id="exploreBtn" class="explore" type="button" aria-pressed="false">探索模式</button>
         <button id="playBtn" class="primary" type="button">播放全过程</button>
@@ -992,6 +1025,7 @@
         <span id="stepLabel" class="step-label">第 1 步 / 6</span>
         <h2 id="stepTitle">游离核糖体</h2>
         <p id="stepDesc">核糖体读取 mRNA 信息，合成分泌蛋白的多肽链。进入探索模式后可拖动核糖体，观察它作为“合成起点”的位置。</p>
+        <p class="study-tip">点击细胞结构查看说明；进入探索模式后，按提示拖动素材或点击加工。</p>
         <div id="taskCard" class="task-card" role="status" aria-live="polite"></div>
       </div>
       <div id="stepList" class="steps"></div>
@@ -1102,7 +1136,7 @@
       },
       {
         title: "囊泡运输",
-        desc: "高尔基体膜再次形成包裹蛋白质的囊泡，将蛋白质运往细胞膜。",
+        desc: "高尔基体膜形成包裹蛋白质的分泌小泡，将蛋白质运往细胞膜。",
         actor: "secretoryVesicle",
         organ: "golgi",
         x: 77,
